@@ -27,18 +27,36 @@ def main():
     host = "127.0.0.1"   # or your simulator IP
     port = 30002         # UR primary interface port
 
-    # Example 1: Joint move (movej)
-    movej_cmd = "movej([0.0, -1.57, 0.0, -1.57, 0.0, 0.0], a=1.2, v=0.25)"
+    # Start at safe position
+    send_urscript(host, port,
+                  "movej([0, -1.2, 1.8, -1.0, -1.57, 0], a=1.0, v=0.1)")
+    time.sleep(2)
 
-    # Example 2: Linear move (movel)
-    movel_cmd = "movel(p[0.30, -0.10, 0.20, 0.0, 3.14, 0.0], a=0.5, v=0.1)"
+    # Define square corners
+    A = "movel(p[0.25, -0.25, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
+    B = "movel(p[0.35, -0.25, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
+    C = "movel(p[0.35, -0.35, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
+    D = "movel(p[0.25, -0.35, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
 
-    # Send commands
-    send_urscript(host, port, movej_cmd)
-    time.sleep(1)
-    send_urscript(host, port, movel_cmd)
+    # Move to starting corner A
+    send_urscript(host, port, A)
+    time.sleep(2)
 
-    print("Done.")
+    # Trace square path
+    send_urscript(host, port, B)
+    time.sleep(2)
+
+    send_urscript(host, port, C)
+    time.sleep(2)
+
+    send_urscript(host, port, D)
+    time.sleep(2)
+
+    # Back to start A
+    send_urscript(host, port, A)
+    time.sleep(2)
+
+    print("Square motion complete!")
 
 if __name__ == "__main__":
     main()
