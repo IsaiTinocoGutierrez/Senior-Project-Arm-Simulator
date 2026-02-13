@@ -24,46 +24,39 @@ def send_urscript(host: str, port: int, command: str):
         print(f"[ERROR] {e}")
 
 def main():
-    host = "127.0.0.1"
-    port = 30002
+    host = "127.0.0.1"   # or your simulator IP
+    port = 30002         # UR primary interface port
 
-    # Start safely
-    send_urscript(host, port, 
-        "movej([0, -1.2, 1.8, -1.0, -1.57, 0], a=1.0, v=0.1)")
-    time.sleep(2)
-
-    # ---- Move above A2 ----
+    # Start at safe position
     send_urscript(host, port,
-        "movel(p[0.20, -0.25, 0.15, 0, 3.14, 0], a=0.3, v=0.1)")
+                  "movej([0, -1.2, 1.8, -1.0, -1.57, 0], a=1.0, v=0.1)")
     time.sleep(2)
 
-    # ---- Lower to piece at A2 ----
-    send_urscript(host, port,
-        "movel(p[0.20, -0.25, 0.05, 0, 3.14, 0], a=0.3, v=0.1)")
+    # Define square corners
+    A = "movel(p[0.25, -0.25, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
+    B = "movel(p[0.35, -0.25, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
+    C = "movel(p[0.35, -0.35, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
+    D = "movel(p[0.25, -0.35, 0.35, 0, 3.14, 0], a=0.3, v=0.1)"
+
+    # Move to starting corner A
+    send_urscript(host, port, A)
     time.sleep(2)
 
-    # * Here robot would close the gripper (future) *
-
-    # ---- Lift up from A2 ----
-    send_urscript(host, port,
-        "movel(p[0.20, -0.25, 0.15, 0, 3.14, 0], a=0.3, v=0.1)")
+    # Trace square path
+    send_urscript(host, port, B)
     time.sleep(2)
 
-    # ---- Move above A4 ----
-    send_urscript(host, port,
-        "movel(p[0.20, -0.15, 0.15, 0, 3.14, 0], a=0.3, v=0.1)")
+    send_urscript(host, port, C)
     time.sleep(2)
 
-    # ---- Lower to place on A4 ----
-    send_urscript(host, port,
-        "movel(p[0.20, -0.15, 0.05, 0, 3.14, 0], a=0.3, v=0.1)")
+    send_urscript(host, port, D)
     time.sleep(2)
 
-    # * Here robot would release gripper (future) *
-
-    # ---- Return to neutral pose ----
-    send_urscript(host, port,
-        "movel(p[0.25, -0.30, 0.25, 0, 3.14, 0], a=0.3, v=0.1)")
+    # Back to start A
+    send_urscript(host, port, A)
     time.sleep(2)
 
-    print("Chess move A2 → A4 complete")
+    print("Square motion complete!")
+
+if __name__ == "__main__":
+    main()
