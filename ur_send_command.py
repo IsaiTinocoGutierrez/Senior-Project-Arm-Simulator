@@ -42,22 +42,20 @@ def make_square_maps(
 
     return above, touch
 
-def pick_and_place(host: str, port: int, above: dict, touch: dict,
-                   src: str, dst: str, a: float = 0.3, v: float = 0.1):
+def pick_and_place_one_program(host, port, above, touch, src, dst, a=0.3, v=0.1):
+    script = f"""
+def chess_pick_place():
+  movel({above[src]}, a={a}, v={v})
+  movel({touch[src]}, a={a}, v={v})
+  movel({above[src]}, a={a}, v={v})
 
-    # Approach source
-    send_urscript(host, port, movel_cmd(above[src], a, v)); time.sleep(1.5)
-    # Dip down (“pick”)
-    send_urscript(host, port, movel_cmd(touch[src], a, v)); time.sleep(1.0)
-    # Lift
-    send_urscript(host, port, movel_cmd(above[src], a, v)); time.sleep(1.0)
-
-    # Travel to destination
-    send_urscript(host, port, movel_cmd(above[dst], a, v)); time.sleep(1.5)
-    # Dip down (“place”)
-    send_urscript(host, port, movel_cmd(touch[dst], a, v)); time.sleep(1.0)
-    # Lift
-    send_urscript(host, port, movel_cmd(above[dst], a, v)); time.sleep(1.0)
+  movel({above[dst]}, a={a}, v={v})
+  movel({touch[dst]}, a={a}, v={v})
+  movel({above[dst]}, a={a}, v={v})
+end
+chess_pick_place()
+"""
+    send_urscript(host, port, script)
 
 def uci_to_squares(uci: str):
     """
@@ -127,10 +125,11 @@ def main():
             src = chess.square_name(human_move.from_square).upper()
             dst = chess.square_name(human_move.to_square).upper()
             print(f"Robot executes YOU: {src} -> {dst}")
-            pick_and_place(host, port, above, touch, src, dst, a=0.3, v=0.1)
+            pick_and_place_one_program(host, port, above, touch, src, dst, a=0.3, v=0.1)
 
             board.push(human_move)
             print(board)
+            time.sleep(3)
 
             if board.is_game_over():
                 break
