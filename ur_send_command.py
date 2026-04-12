@@ -14,14 +14,14 @@ def send_urscript(host: str, port: int, command: str):
                 command += "\n"
             s.sendall(command.encode("utf-8"))
             print(f">> Sent: {command.strip()}")
-            time.sleep(0.2)
+            time.sleep(3)
     except Exception as e:
         print(f"[ERROR] {e}")
 
-def movej_cmd(pose_str: str, a: float = 0.4, v: float = 0.2) -> str:
+def movej_cmd(pose_str: str, a: float = 0.6, v: float = 0.3) -> str:
     return f"movej({pose_str}, a={a}, v={v})"
 
-def movel_cmd(pose_str: str, a: float = 0.2, v: float = 0.05) -> str:
+def movel_cmd(pose_str: str, a: float = 0.25, v: float = 0.08) -> str:
     return f"movel({pose_str}, a={a}, v={v})"
 
 def make_square_maps(
@@ -48,13 +48,13 @@ def make_square_maps(
 def pick_and_place_one_program(host, port, above, touch, src, dst):
     script = f"""
 def chess_pick_place():
-  movej({above[src]}, a=0.4, v=0.2)
-  movel({touch[src]}, a=0.15, v=0.04)
-  movel({above[src]}, a=0.15, v=0.04)
+  movej({above[src]}, a=0.6, v=0.3)
+  movel({touch[src]}, a=0.25, v=0.08)
+  movel({above[src]}, a=0.25, v=0.08)
 
-  movej({above[dst]}, a=0.4, v=0.2)
-  movel({touch[dst]}, a=0.15, v=0.04)
-  movel({above[dst]}, a=0.15, v=0.04)
+  movej({above[dst]}, a=0.6, v=0.3)
+  movel({touch[dst]}, a=0.25, v=0.08)
+  movel({above[dst]}, a=0.25, v=0.08)
 end
 chess_pick_place()
 """
@@ -71,7 +71,7 @@ def main():
     # Safe neutral pose
     send_urscript(host, port,
                   "movej([0, -1.2, 1.8, -1.0, -1.57, 0], a=0.8, v=0.15)")
-    time.sleep(3)
+    time.sleep(2.5)
 
     # Safer test board placement
     xA1 = 0.52
@@ -115,7 +115,7 @@ def main():
 
             board.push(human_move)
             print(board)
-            time.sleep(4)
+            time.sleep(2.5)
 
             if board.is_game_over():
                 break
@@ -127,11 +127,14 @@ def main():
             ai_src = chess.square_name(ai_move.from_square).upper()
             ai_dst = chess.square_name(ai_move.to_square).upper()
             print(f"Robot executes AI: {ai_src} -> {ai_dst}")
+            time.sleep(2.5)
+            print("About to execute AI move...")
             pick_and_place_one_program(host, port, above, touch, ai_src, ai_dst)
+            print("AI move script sent.")
 
             board.push(ai_move)
             print(board)
-            time.sleep(4)
+            time.sleep(2.5)
 
         print("Game over:", board.result())
 
