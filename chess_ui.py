@@ -26,7 +26,7 @@ from board_mapping import make_square_maps
 from robot_moves import pick_and_place_one_program
 from chess_engine import get_stockfish_move
 
-#Capital letters are black pieces and lowercase letters are white pieces
+#Capital letters are white pieces and lowercase letters are black pieces.
 UNICODE_PIECES = {
     "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
     "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
@@ -55,11 +55,23 @@ class ChessRobotUI:
 
         self.engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
 
-        self.status_label = tk.Label(root, text="Your turn: click a piece, then click destination.", font=("Arial", 12))
+        self.status_label = tk.Label(
+            root,
+            text="Your turn: click a piece, then click destination.",
+            font=("Arial", 12)
+        )
         self.status_label.grid(row=0, column=0, columnspan=8, pady=10)
 
         self.build_board()
         self.draw_board()
+
+        self.reset_button = tk.Button(
+            root,
+            text="Reset Game",
+            font=("Arial", 12),
+            command=self.reset_game
+        )
+        self.reset_button.grid(row=9, column=0, columnspan=8, pady=10)
 
         send_urscript(HOST, PORT, NEUTRAL_MOVEJ)
         time.sleep(STARTUP_DELAY)
@@ -166,6 +178,15 @@ class ChessRobotUI:
             self.status_label.config(text=f"Game over: {self.board.result()}")
         else:
             self.status_label.config(text="Your turn: click a piece, then click destination.")
+
+    def reset_game(self):
+        self.board = chess.Board()
+        self.selected_square = None
+        self.draw_board()
+        self.status_label.config(text="Game reset. Your turn: click a piece, then click destination.")
+
+        send_urscript(HOST, PORT, NEUTRAL_MOVEJ)
+        time.sleep(STARTUP_DELAY)
 
     def close(self):
         self.engine.quit()
