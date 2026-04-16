@@ -26,7 +26,7 @@ from board_mapping import make_square_maps
 from robot_moves import pick_and_place_one_program
 from chess_engine import get_stockfish_move
 
-
+#Capital letters are black pieces and lowercase letters are white pieces
 UNICODE_PIECES = {
     "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
     "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
