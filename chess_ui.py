@@ -26,10 +26,24 @@ from board_mapping import make_square_maps
 from robot_moves import pick_and_place_one_program
 from chess_engine import get_stockfish_move
 
-#Capital letters are white pieces and lowercase letters are black pieces.
+#Capital letters are black pieces and lowercase letters are white pieces.
 UNICODE_PIECES = {
     "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
     "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
+}
+PIECE_NAMES = {
+    "p": "White pawn",
+    "n": "White knight",
+    "b": "White bishop",
+    "r": "White rook",
+    "q": "White queen",
+    "k": "White king",
+    "P": "Black pawn",
+    "N": "Black knight",
+    "B": "Black bishop",
+    "R": "Black rook",
+    "Q": "Black queen",
+    "K": "Black king",
 }
 
 
@@ -37,10 +51,22 @@ class ChessRobotUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Robot Chess")
+        self.root.resizable(True, True)
 
         self.board = chess.Board()
         self.selected_square = None
+        self.captured_white = []
+        self.captured_black = []
+
+        self.move_log = []
         self.buttons = {}
+        self.root.geometry("900x600")
+        for i in range(8):
+            self.root.grid_rowconfigure(i + 1, weight=1)
+            self.root.grid_columnconfigure(i, weight=1)
+
+        # Allow right panel (reset button area) to resize too
+        self.root.grid_columnconfigure(8, weight=1)
 
         self.above, self.touch = make_square_maps(
             xA1=X_A1,
@@ -71,8 +97,63 @@ class ChessRobotUI:
             font=("Arial", 12),
             command=self.reset_game
         )
-        self.reset_button.grid(row=9, column=0, columnspan=8, pady=10)
+        self.reset_button.grid(row=1, column=8, rowspan=2, padx=10)
 
+        self.captured_white_label = tk.Label(
+            root,
+            text="Captured White: ",
+            font=("Arial", 12),
+            anchor="w",
+            justify="left"
+        )
+        self.captured_white_label.grid(row=3, column=8, padx=10, sticky="nw")
+
+        self.captured_black_label = tk.Label(
+            root,
+            text="Captured Black: ",
+            font=("Arial", 12),
+            anchor="w",
+            justify="left"
+        )
+        self.captured_black_label.grid(row=4, column=8, padx=10, sticky="nw")
+
+        self.move_log_title = tk.Label(
+            root,
+            text="Move Log:",
+            font=("Arial", 12, "bold"),
+            anchor="w",
+            justify="left"
+        )
+        self.move_log_title.grid(row=5, column=8, padx=10, pady=(10, 0), sticky="nw")
+
+        # Frame to hold text + scrollbar
+        self.move_log_frame = tk.Frame(root)
+        self.move_log_frame.grid(row=6, column=8, rowspan=3, padx=10, pady=5, sticky="nsew")
+
+        # Scrollbar
+        self.move_log_scrollbar = tk.Scrollbar(self.move_log_frame)
+
+        # Text widget
+        self.move_log_text = tk.Text(
+            self.move_log_frame,
+            width=28,
+            height=15,
+            font=("Arial", 10),
+            state="disabled",
+            wrap="word",
+            yscrollcommand=self.move_log_scrollbar.set
+        )
+
+        # Link scrollbar to text
+        self.move_log_scrollbar.config(command=self.move_log_text.yview)
+
+        # resize scrollbar
+        self.root.grid_rowconfigure(6, weight=1)
+        self.root.grid_columnconfigure(8, weight=1)
+
+        # Layout inside frame
+        self.move_log_text.pack(side="left", fill="both", expand=True)
+        self.move_log_scrollbar.pack(side="right", fill="y")
         send_urscript(HOST, PORT, NEUTRAL_MOVEJ)
         time.sleep(STARTUP_DELAY)
 
@@ -88,7 +169,7 @@ class ChessRobotUI:
                     bg=color,
                     command=lambda r=row, c=col: self.on_square_click(r, c)
                 )
-                btn.grid(row=row + 1, column=col)
+                btn.grid(row=row + 1, column=col, sticky="nsew")
                 self.buttons[(row, col)] = btn
 
     def draw_board(self):
@@ -140,6 +221,17 @@ class ChessRobotUI:
 
         self.execute_human_move(move)
 
+    def format_move_entry(self, move):
+        piece = self.board.piece_at(move.from_square)
+        if piece is None:
+            return "Unknown move"
+
+        piece_name = PIECE_NAMES[piece.symbol()]
+        src = chess.square_name(move.from_square).upper()
+        dst = chess.square_name(move.to_square).upper()
+
+        return f"{piece_name}: {src} -> {dst}"
+
     def execute_human_move(self, move):
         src = chess.square_name(move.from_square).upper()
         dst = chess.square_name(move.to_square).upper()
@@ -148,7 +240,19 @@ class ChessRobotUI:
         self.root.update()
 
         pick_and_place_one_program(HOST, PORT, self.above, self.touch, src, dst)
+        captured_piece = self.board.piece_at(move.to_square)
+        if captured_piece:
+            symbol = UNICODE_PIECES[captured_piece.symbol()]
+            if captured_piece.color == chess.WHITE:
+                self.captured_white.append(symbol)
+            else:
+                self.captured_black.append(symbol)
+
+        move_entry = self.format_move_entry(move)
+        self.move_log.append(move_entry)
         self.board.push(move)
+        self.update_move_log_display()
+        self.update_captured_display()
         self.draw_board()
 
         time.sleep(MOVE_DELAY)
@@ -169,7 +273,19 @@ class ChessRobotUI:
         self.root.update()
 
         pick_and_place_one_program(HOST, PORT, self.above, self.touch, src, dst)
+        captured_piece = self.board.piece_at(ai_move.to_square)
+        if captured_piece:
+            symbol = UNICODE_PIECES[captured_piece.symbol()]
+            if captured_piece.color == chess.WHITE:
+                self.captured_white.append(symbol)
+            else:
+                self.captured_black.append(symbol)
+
+        move_entry = self.format_move_entry(ai_move)
+        self.move_log.append(move_entry)
         self.board.push(ai_move)
+        self.update_move_log_display()
+        self.update_captured_display()
         self.draw_board()
 
         time.sleep(MOVE_DELAY)
@@ -179,14 +295,36 @@ class ChessRobotUI:
         else:
             self.status_label.config(text="Your turn: click a piece, then click destination.")
 
+    def update_captured_display(self):
+        white_text = "Captured White: " + " ".join(self.captured_white)
+        black_text = "Captured Black: " + " ".join(self.captured_black)
+
+        self.captured_white_label.config(text=white_text)
+        self.captured_black_label.config(text=black_text)
+
     def reset_game(self):
         self.board = chess.Board()
         self.selected_square = None
         self.draw_board()
         self.status_label.config(text="Game reset. Your turn: click a piece, then click destination.")
+        self.captured_white = []
+        self.captured_black = []
+        self.update_captured_display()
+        self.move_log = []
+        self.update_move_log_display()
 
         send_urscript(HOST, PORT, NEUTRAL_MOVEJ)
         time.sleep(STARTUP_DELAY)
+
+    def update_move_log_display(self):
+        self.move_log_text.config(state="normal")
+        self.move_log_text.delete("1.0", tk.END)
+
+        for i, entry in enumerate(self.move_log, start=1):
+            self.move_log_text.insert(tk.END, f"{i}. {entry}\n")
+
+        self.move_log_text.see(tk.END) #auto-scroll
+        self.move_log_text.config(state="disabled")
 
     def close(self):
         self.engine.quit()
