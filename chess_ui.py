@@ -28,8 +28,8 @@ from chess_engine import get_stockfish_move
 
 #Capital letters are black pieces and lowercase letters are white pieces.
 UNICODE_PIECES = {
-    "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
-    "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
+    "p": "♙", "n": "♘", "b": "♗", "r": "♖", "q": "♕", "k": "♔",
+    "P": "♟", "N": "♞", "B": "♝", "R": "♜", "Q": "♛", "K": "♚",
 }
 PIECE_NAMES = {
     "p": "White pawn",
