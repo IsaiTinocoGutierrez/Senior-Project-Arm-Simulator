@@ -1,5 +1,4 @@
 import time
-import tkinter as tk
 from tkinter import messagebox
 import chess
 import chess.engine
@@ -25,48 +24,51 @@ from robot_comm import send_urscript
 from board_mapping import make_square_maps
 from robot_moves import pick_and_place_one_program
 from chess_engine import get_stockfish_move
+from ui.board_view import BoardView
+from ui.side_panel import SidePanel
 
-#Capital letters are black pieces and lowercase letters are white pieces.
-UNICODE_PIECES = {
-    "p": "♙", "n": "♘", "b": "♗", "r": "♖", "q": "♕", "k": "♔",
-    "P": "♟", "N": "♞", "B": "♝", "R": "♜", "Q": "♛", "K": "♚",
-}
+
 PIECE_NAMES = {
-    "p": "White pawn",
-    "n": "White knight",
-    "b": "White bishop",
-    "r": "White rook",
-    "q": "White queen",
-    "k": "White king",
-    "P": "Black pawn",
-    "N": "Black knight",
-    "B": "Black bishop",
-    "R": "Black rook",
-    "Q": "Black queen",
-    "K": "Black king",
+    "P": "White pawn",
+    "N": "White knight",
+    "B": "White bishop",
+    "R": "White rook",
+    "Q": "White queen",
+    "K": "White king",
+    "p": "Black pawn",
+    "n": "Black knight",
+    "b": "Black bishop",
+    "r": "Black rook",
+    "q": "Black queen",
+    "k": "Black king",
+}
+
+# Used for captured-piece display in the side panel.
+UNICODE_PIECES = {
+    "P": "♙", "N": "♘", "B": "♗", "R": "♖", "Q": "♕", "K": "♔",
+    "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
 }
 
 
-class ChessRobotUI:
+class GameController:
     def __init__(self, root):
         self.root = root
         self.root.title("Robot Chess")
         self.root.resizable(True, True)
+        self.root.geometry("900x600")
+
+        for i in range(8):
+            self.root.grid_rowconfigure(i + 1, weight=1)
+            self.root.grid_columnconfigure(i, weight=1)
+
+        self.root.grid_columnconfigure(8, weight=1)
+        self.root.grid_rowconfigure(6, weight=1)
 
         self.board = chess.Board()
         self.selected_square = None
         self.captured_white = []
         self.captured_black = []
-
         self.move_log = []
-        self.buttons = {}
-        self.root.geometry("900x600")
-        for i in range(8):
-            self.root.grid_rowconfigure(i + 1, weight=1)
-            self.root.grid_columnconfigure(i, weight=1)
-
-        # Allow right panel (reset button area) to resize too
-        self.root.grid_columnconfigure(8, weight=1)
 
         self.above, self.touch = make_square_maps(
             xA1=X_A1,
@@ -81,122 +83,23 @@ class ChessRobotUI:
 
         self.engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
 
-        self.status_label = tk.Label(
-            root,
-            text="Your turn: click a piece, then click destination.",
-            font=("Arial", 12)
-        )
-        self.status_label.grid(row=0, column=0, columnspan=8, pady=10)
+        self.board_view = BoardView(root, self.on_square_click)
+        self.board_view.build_board()
 
-        self.build_board()
-        self.draw_board()
+        self.side_panel = SidePanel(root, self.reset_game)
 
-        self.reset_button = tk.Button(
-            root,
-            text="Reset Game",
-            font=("Arial", 12),
-            command=self.reset_game
-        )
-        self.reset_button.grid(row=1, column=8, rowspan=2, padx=10)
+        self.refresh_ui()
 
-        self.captured_white_label = tk.Label(
-            root,
-            text="Captured White: ",
-            font=("Arial", 12),
-            anchor="w",
-            justify="left"
-        )
-        self.captured_white_label.grid(row=3, column=8, padx=10, sticky="nw")
-
-        self.captured_black_label = tk.Label(
-            root,
-            text="Captured Black: ",
-            font=("Arial", 12),
-            anchor="w",
-            justify="left"
-        )
-        self.captured_black_label.grid(row=4, column=8, padx=10, sticky="nw")
-
-        self.move_log_title = tk.Label(
-            root,
-            text="Move Log:",
-            font=("Arial", 12, "bold"),
-            anchor="w",
-            justify="left"
-        )
-        self.move_log_title.grid(row=5, column=8, padx=10, pady=(10, 0), sticky="nw")
-
-        # Frame to hold text + scrollbar
-        self.move_log_frame = tk.Frame(root)
-        self.move_log_frame.grid(row=6, column=8, rowspan=3, padx=10, pady=5, sticky="nsew")
-
-        # Scrollbar
-        self.move_log_scrollbar = tk.Scrollbar(self.move_log_frame)
-
-        # Text widget
-        self.move_log_text = tk.Text(
-            self.move_log_frame,
-            width=28,
-            height=15,
-            font=("Arial", 10),
-            state="disabled",
-            wrap="word",
-            yscrollcommand=self.move_log_scrollbar.set
-        )
-
-        # Link scrollbar to text
-        self.move_log_scrollbar.config(command=self.move_log_text.yview)
-
-        # resize scrollbar
-        self.root.grid_rowconfigure(6, weight=1)
-        self.root.grid_columnconfigure(8, weight=1)
-
-        # Layout inside frame
-        self.move_log_text.pack(side="left", fill="both", expand=True)
-        self.move_log_scrollbar.pack(side="right", fill="y")
         send_urscript(HOST, PORT, NEUTRAL_MOVEJ)
         time.sleep(STARTUP_DELAY)
 
-    def build_board(self):
-        for row in range(8):
-            for col in range(8):
-                color = "#F0D9B5" if (row + col) % 2 == 0 else "#B58863"
-                btn = tk.Button(
-                    self.root,
-                    width=4,
-                    height=2,
-                    font=("Arial", 24),
-                    bg=color,
-                    command=lambda r=row, c=col: self.on_square_click(r, c)
-                )
-                btn.grid(row=row + 1, column=col, sticky="nsew")
-                self.buttons[(row, col)] = btn
-
-    def draw_board(self):
-        for row in range(8):
-            for col in range(8):
-                square = chess.square(col, 7 - row)
-                piece = self.board.piece_at(square)
-
-                text = UNICODE_PIECES.get(piece.symbol(), "") if piece else ""
-                color = "#F0D9B5" if (row + col) % 2 == 0 else "#B58863"
-
-                self.buttons[(row, col)].config(text=text, bg=color)
-
-        if self.selected_square is not None:
-            row, col = self.square_to_rowcol(self.selected_square)
-            self.buttons[(row, col)].config(bg="yellow")
-
-    def square_to_rowcol(self, square):
-        col = chess.square_file(square)
-        row = 7 - chess.square_rank(square)
-        return row, col
-
-    def rowcol_to_square(self, row, col):
-        return chess.square(col, 7 - row)
+    def refresh_ui(self):
+        self.board_view.draw_board(self.board, self.selected_square)
+        self.side_panel.update_captured(self.captured_white, self.captured_black)
+        self.side_panel.update_move_log(self.move_log)
 
     def on_square_click(self, row, col):
-        clicked_square = self.rowcol_to_square(row, col)
+        clicked_square = self.board_view.rowcol_to_square(row, col)
 
         if self.selected_square is None:
             piece = self.board.piece_at(clicked_square)
@@ -204,14 +107,15 @@ class ChessRobotUI:
                 return
             if piece.color != chess.WHITE:
                 return
+
             self.selected_square = clicked_square
-            self.draw_board()
+            self.refresh_ui()
             return
 
         from_sq = self.selected_square
         to_sq = clicked_square
         self.selected_square = None
-        self.draw_board()
+        self.refresh_ui()
 
         move = chess.Move(from_sq, to_sq)
 
@@ -232,14 +136,7 @@ class ChessRobotUI:
 
         return f"{piece_name}: {src} -> {dst}"
 
-    def execute_human_move(self, move):
-        src = chess.square_name(move.from_square).upper()
-        dst = chess.square_name(move.to_square).upper()
-
-        self.status_label.config(text=f"You played: {src} -> {dst}")
-        self.root.update()
-
-        pick_and_place_one_program(HOST, PORT, self.above, self.touch, src, dst)
+    def record_capture_if_any(self, move):
         captured_piece = self.board.piece_at(move.to_square)
         if captured_piece:
             symbol = UNICODE_PIECES[captured_piece.symbol()]
@@ -248,17 +145,27 @@ class ChessRobotUI:
             else:
                 self.captured_black.append(symbol)
 
+    def execute_human_move(self, move):
+        src = chess.square_name(move.from_square).upper()
+        dst = chess.square_name(move.to_square).upper()
+
+        self.side_panel.update_status(f"You played: {src} -> {dst}")
+        self.root.update()
+
+        pick_and_place_one_program(HOST, PORT, self.above, self.touch, src, dst)
+
+        self.record_capture_if_any(move)
+
         move_entry = self.format_move_entry(move)
         self.move_log.append(move_entry)
+
         self.board.push(move)
-        self.update_move_log_display()
-        self.update_captured_display()
-        self.draw_board()
+        self.refresh_ui()
 
         time.sleep(MOVE_DELAY)
 
         if self.board.is_game_over():
-            self.status_label.config(text=f"Game over: {self.board.result()}")
+            self.side_panel.update_status(f"Game over: {self.board.result()}")
             return
 
         self.execute_ai_move()
@@ -269,74 +176,41 @@ class ChessRobotUI:
         src = chess.square_name(ai_move.from_square).upper()
         dst = chess.square_name(ai_move.to_square).upper()
 
-        self.status_label.config(text=f"Stockfish plays: {src} -> {dst}")
+        self.side_panel.update_status(f"Stockfish plays: {src} -> {dst}")
         self.root.update()
 
         pick_and_place_one_program(HOST, PORT, self.above, self.touch, src, dst)
-        captured_piece = self.board.piece_at(ai_move.to_square)
-        if captured_piece:
-            symbol = UNICODE_PIECES[captured_piece.symbol()]
-            if captured_piece.color == chess.WHITE:
-                self.captured_white.append(symbol)
-            else:
-                self.captured_black.append(symbol)
+
+        self.record_capture_if_any(ai_move)
 
         move_entry = self.format_move_entry(ai_move)
         self.move_log.append(move_entry)
+
         self.board.push(ai_move)
-        self.update_move_log_display()
-        self.update_captured_display()
-        self.draw_board()
+        self.refresh_ui()
 
         time.sleep(MOVE_DELAY)
 
         if self.board.is_game_over():
-            self.status_label.config(text=f"Game over: {self.board.result()}")
+            self.side_panel.update_status(f"Game over: {self.board.result()}")
         else:
-            self.status_label.config(text="Your turn: click a piece, then click destination.")
-
-    def update_captured_display(self):
-        white_text = "Captured White: " + " ".join(self.captured_white)
-        black_text = "Captured Black: " + " ".join(self.captured_black)
-
-        self.captured_white_label.config(text=white_text)
-        self.captured_black_label.config(text=black_text)
+            self.side_panel.update_status("Your turn: click a piece, then click destination.")
 
     def reset_game(self):
         self.board = chess.Board()
         self.selected_square = None
-        self.draw_board()
-        self.status_label.config(text="Game reset. Your turn: click a piece, then click destination.")
         self.captured_white = []
         self.captured_black = []
-        self.update_captured_display()
         self.move_log = []
-        self.update_move_log_display()
+
+        self.refresh_ui()
+        self.side_panel.update_status("Game reset. Your turn: click a piece, then click destination.")
 
         send_urscript(HOST, PORT, NEUTRAL_MOVEJ)
         time.sleep(STARTUP_DELAY)
 
-    def update_move_log_display(self):
-        self.move_log_text.config(state="normal")
-        self.move_log_text.delete("1.0", tk.END)
-
-        for i, entry in enumerate(self.move_log, start=1):
-            self.move_log_text.insert(tk.END, f"{i}. {entry}\n")
-
-        self.move_log_text.see(tk.END) #auto-scroll
-        self.move_log_text.config(state="disabled")
-
     def close(self):
-        self.engine.quit()
-
-
-def run_ui():
-    root = tk.Tk()
-    app = ChessRobotUI(root)
-
-    def on_close():
-        app.close()
-        root.destroy()
-
-    root.protocol("WM_DELETE_WINDOW", on_close)
-    root.mainloop()
+        try:
+            self.engine.quit()
+        finally:
+            self.root.destroy()
