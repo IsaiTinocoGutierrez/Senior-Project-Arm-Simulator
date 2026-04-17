@@ -32,18 +32,18 @@ UNICODE_PIECES = {
     "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
 }
 PIECE_NAMES = {
-    "p": "White pawn",
-    "n": "White knight",
-    "b": "White bishop",
-    "r": "White rook",
-    "q": "White queen",
-    "k": "White king",
-    "P": "Black pawn",
-    "N": "Black knight",
-    "B": "Black bishop",
-    "R": "Black rook",
-    "Q": "Black queen",
-    "K": "Black king",
+    "P": "White pawn",
+    "N": "White knight",
+    "B": "White bishop",
+    "R": "White rook",
+    "Q": "White queen",
+    "K": "White king",
+    "p": "Black pawn",
+    "n": "Black knight",
+    "b": "Black bishop",
+    "r": "Black rook",
+    "q": "Black queen",
+    "k": "Black king",
 }
 
 
