@@ -1,3 +1,5 @@
+# for real robot IP
+#HOST = "192.168.0.205"
 HOST = "127.0.0.1"
 PORT = 30002
 
@@ -5,21 +7,21 @@ FILES = "ABCDEFGH"
 RANKS = "12345678"
 
 # Safe neutral pose
-NEUTRAL_MOVEJ = "movej([0, -1.2, 1.8, -1.0, -1.57, 0], a=0.8, v=0.15)"
+NEUTRAL_MOVEJ =  "movej([1.080, -1.682, 1.906, -1.804, -1.584, -0.496], a=0.3, v=0.08)"
 
 # Board placement
-X_A1 = 0.52
-Y_A1 = -0.20
-SQUARE_SIZE = 0.057
+X_A1 = -0.089
+Y_A1 = -0.500 #shifts the whole board closer or further from arm.
+SQUARE_SIZE = 0.052
 
 # Heights
-Z_ABOVE = 0.22
-Z_TOUCH = 0.12
+Z_ABOVE = 0.30
+Z_TOUCH = 0.25
 
 # Orientation
-RX = 0.0
-RY = 3.14
-RZ = 0.0
+RX = 0.008
+RY = -3.126
+RZ = 0.003
 
 # Motion tuning
 MOVEJ_A = 0.6
@@ -28,9 +30,9 @@ MOVEL_A = 0.25
 MOVEL_V = 0.08
 
 # Timing
-SEND_DELAY = 3
-STARTUP_DELAY = 2.5
-MOVE_DELAY = 2.5
+SEND_DELAY = 2
+STARTUP_DELAY = 1.0
+MOVE_DELAY = 1.0
 
 # Stockfish
 STOCKFISH_PATH = r"C:\Users\isait\OneDrive\Desktop\senior project\stockfish\stockfish-windows-x86-64-avx2.exe"

@@ -13,14 +13,16 @@ def movel_cmd(pose_str: str, a: float = MOVEL_A, v: float = MOVEL_V) -> str:
 def pick_and_place_one_program(host, port, above, touch, src, dst):
     script = f"""
 def chess_pick_place():
-  movej({above[src]}, a={MOVEJ_A}, v={MOVEJ_V})
+  movel({above[src]}, a={MOVEJ_A}, v={MOVEJ_V})
   movel({touch[src]}, a={MOVEL_A}, v={MOVEL_V})
   movel({above[src]}, a={MOVEL_A}, v={MOVEL_V})
 
-  movej({above[dst]}, a={MOVEJ_A}, v={MOVEJ_V})
+  movel({above[dst]}, a={MOVEJ_A}, v={MOVEJ_V})
   movel({touch[dst]}, a={MOVEL_A}, v={MOVEL_V})
   movel({above[dst]}, a={MOVEL_A}, v={MOVEL_V})
 end
 chess_pick_place()
 """
+    print("=== URScript sent ===")
+    print(script)
     send_urscript(host, port, script)
