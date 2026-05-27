@@ -2,6 +2,7 @@ import time
 from tkinter import messagebox
 import chess
 import chess.engine
+import threading
 
 from config import (
     HOST,
@@ -34,6 +35,15 @@ from services.game_state import GameState
 from services.capture_logic import record_capture_if_any
 from services.move_logger import append_move_log
 
+from robot.manual_jog import (
+    jog_x_positive,
+    jog_x_negative,
+    jog_y_positive,
+    jog_y_negative,
+    jog_z_positive,
+    jog_z_negative,
+    stop_motion,
+)
 
 class GameController:
     def __init__(self, root):
@@ -68,6 +78,16 @@ class GameController:
         self.board_view.build_board()
 
         self.side_panel = SidePanel(root, self.reset_game)
+
+        self.side_panel.connect_jog_buttons(
+            x_neg_callback=self.jog_x_negative,
+            x_pos_callback=self.jog_x_positive,
+            y_neg_callback=self.jog_y_negative,
+            y_pos_callback=self.jog_y_positive,
+            z_neg_callback=self.jog_z_negative,
+            z_pos_callback=self.jog_z_positive,
+            stop_callback=self.stop_robot_motion,
+        )
 
         self.refresh_ui()
 
@@ -168,6 +188,12 @@ class GameController:
         else:
             self.side_panel.update_status("Your turn: click a piece, then click destination.")
 
+    def run_jog_async(self, jog_function):
+        threading.Thread(
+            target=jog_function,
+            daemon=True
+        ).start()
+
     def reset_game(self):
         self.state.reset()
         self.refresh_ui()
@@ -175,6 +201,34 @@ class GameController:
 
         send_urscript(HOST, PORT, get_neutral_pose_command())
         time.sleep(STARTUP_DELAY)
+
+    def jog_x_positive(self):
+        self.side_panel.update_status("Jogging X+")
+        self.run_jog_async(lambda: jog_x_positive(HOST, PORT))
+
+    def jog_x_negative(self):
+        self.side_panel.update_status("Jogging X-")
+        self.run_jog_async(lambda: jog_x_negative(HOST, PORT))
+
+    def jog_y_positive(self):
+        self.side_panel.update_status("Jogging Y+")
+        self.run_jog_async(lambda: jog_y_positive(HOST, PORT))
+
+    def jog_y_negative(self):
+        self.side_panel.update_status("Jogging Y-")
+        self.run_jog_async(lambda: jog_y_negative(HOST, PORT))
+
+    def jog_z_positive(self):
+        self.side_panel.update_status("Jogging Z+")
+        self.run_jog_async(lambda: jog_z_positive(HOST, PORT))
+
+    def jog_z_negative(self):
+        self.side_panel.update_status("Jogging Z-")
+        self.run_jog_async(lambda: jog_z_negative(HOST, PORT))
+
+    def stop_robot_motion(self):
+        self.side_panel.update_status("Stopping robot motion")
+        self.run_jog_async(lambda: stop_motion(HOST, PORT))
 
     def close(self):
         try:
